@@ -47,9 +47,9 @@ resource "azurerm_virtual_network" "vnet" {
  #subnet
 resource "azurerm_subnet" "subnet" {
   name                 = "subnet-dev-001"
-  resource_group_name  = azurerm_resource_group.rg.name
+  resource_group_name  = azurerm_resource_group.rg1.name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.10.1.0/24"]
+  address_prefixes     = var.subnet_address_prefix
 }
 
 #---------------new
