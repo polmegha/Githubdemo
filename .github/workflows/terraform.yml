@@ -347,11 +347,6 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_location: ${{ secrets.TF_VAR_LOCATION }}
-          TF_VAR_subnet_name: ${{ secrets.TF_VAR_SUBNET_NAME }}
-          TF_VAR_subnet_address_prefix: ${{ secrets.TF_VAR_SUBNET_ADDRESS_PREFIX }}
-          TF_VAR_tags: ${{ secrets.TF_VAR_TAGS }}
-
 
       - name: Terraform Init
         run: terraform init -reconfigure -input=false
