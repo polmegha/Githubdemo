@@ -1,8 +1,17 @@
-variable "resource_group_name" {}
-variable "location" {}
+variable "resource_group_name" {
+  type = list(string)
+}
+variable "location" {
+  type = list(string)
+}
 
-variable "vnet_name" {}
-variable "vnet_address_space" {}
+variable "vnet_name" {
+  type = list(string)
+}
+variable "vnet_address_space" {
+  type = list(string)
+}
+
 
 # variable "subnet_name" {}
 # variable "subnet_address_prefix" {}
