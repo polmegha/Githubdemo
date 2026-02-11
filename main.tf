@@ -10,7 +10,7 @@ terraform {
 provider "azurerm" {
   features {}
 }
-#resource group
+# #resource group
 
 resource "azurerm_resource_group" "rg1" {
   name     = "rg-dev-002"
@@ -53,6 +53,6 @@ resource "azurerm_subnet" "subnet" {
   
 }
 
-#---------------new
+# #---------------new
 
 
