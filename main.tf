@@ -12,10 +12,10 @@ provider "azurerm" {
 }
 #resource group
 
-# resource "azurerm_resource_group" "rg1" {
-#   name     = "rg-dev-002"
-#   location = "centralindia"
-# }
+resource "azurerm_resource_group" "rg1" {
+  name     = "rg-dev-002"
+  location = "centralindia"
+}
 
 
 #storage 
