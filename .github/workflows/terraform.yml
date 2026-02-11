@@ -1,43 +1,93 @@
+# # name: Terraform Pipeline
+
+# # on:
+# #   push:
+# #     branches:
+# #       - main
+
+# # jobs:
+# #   terraform:
+# #     runs-on: ubuntu-latest
+
+# #     steps:
+# #     - name: Checkout code
+# #       uses: actions/checkout@v4
+
+# #     - name: Setup Terraform
+# #       uses: hashicorp/setup-terraform@v3
+# #       with:
+# #         terraform_version: 1.6.6
+
+# #     - name: Azure Login
+# #       uses: azure/login@v1
+# #       with:
+# #         creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+# #     - name: Terraform Init
+# #       run: terraform init
+
+# #     - name: Terraform Plan
+# #       run: terraform plan
+
+# #     - name: Terraform Apply
+# #       run: terraform apply -auto-approve
+
 # name: Terraform Pipeline
 
 # on:
 #   push:
 #     branches:
 #       - main
+#   workflow_dispatch:
+
+# permissions:
+#   contents: read
 
 # jobs:
 #   terraform:
 #     runs-on: ubuntu-latest
+#     timeout-minutes: 20
 
 #     steps:
-#     - name: Checkout code
-#       uses: actions/checkout@v4
+#       - name: Checkout code
+#         uses: actions/checkout@v4
 
-#     - name: Setup Terraform
-#       uses: hashicorp/setup-terraform@v3
-#       with:
-#         terraform_version: 1.6.6
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v3
+#         with:
+#           terraform_version: 1.6.6
 
-#     - name: Azure Login
-#       uses: azure/login@v1
-#       with:
-#         creds: ${{ secrets.AZURE_CREDENTIALS }}
+#       - name: Azure Login
+#         uses: azure/login@v2
+#         with:
+#           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-#     - name: Terraform Init
-#       run: terraform init
+#       - name: Terraform Init
+#         run: terraform init -input=false
 
-#     - name: Terraform Plan
-#       run: terraform plan
+#       - name: Terraform Plan
+#         env:
+#           TF_VAR_resource_group_name: ${{ secrets.TF_VAR_RESOURCE_GROUP_NAME }}
+#           TF_VAR_location: ${{ secrets.TF_VAR_LOCATION }}
+#           TF_VAR_vnet_name: ${{ secrets.TF_VAR_VNET_NAME }}
+#           TF_VAR_vnet_address_space: ${{ secrets.TF_VAR_VNET_ADDRESS_SPACE }}
+#           TF_VAR_tags: ${{ secrets.TF_VAR_TAGS }}
+#         run: terraform plan -input=false
 
-#     - name: Terraform Apply
-#       run: terraform apply -auto-approve
+#       - name: Terraform Apply
+#         env:
+#           TF_VAR_resource_group_name: ${{ secrets.TF_VAR_RESOURCE_GROUP_NAME }}
+#           TF_VAR_location: ${{ secrets.TF_VAR_LOCATION }}
+#           TF_VAR_vnet_name: ${{ secrets.TF_VAR_VNET_NAME }}
+#           TF_VAR_vnet_address_space: ${{ secrets.TF_VAR_VNET_ADDRESS_SPACE }}
+#           TF_VAR_tags: ${{ secrets.TF_VAR_TAGS }}
+#         run: terraform apply -auto-approve -input=false
 
 name: Terraform Pipeline
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -64,6 +114,31 @@ jobs:
 
       - name: Terraform Init
         run: terraform init -input=false
+
+      # ✅ Auto-import RG if it already exists (prevents "already exists" error)
+      - name: Auto-import existing Resource Group (if present)
+        env:
+          TF_VAR_resource_group_name: ${{ secrets.TF_VAR_RESOURCE_GROUP_NAME }}
+        run: |
+          set -e
+
+          RG_NAME="$TF_VAR_resource_group_name"
+          SUB_ID=$(az account show --query id -o tsv)
+
+          echo "Checking if RG exists in Azure: $RG_NAME"
+          if az group exists -n "$RG_NAME" | grep -q true; then
+            echo "RG exists in Azure."
+
+            echo "Checking if RG is already in Terraform state..."
+            if terraform state list | grep -q '^azurerm_resource_group\.rg1$'; then
+              echo "RG already in state. Skipping import."
+            else
+              echo "RG not in state. Importing..."
+              terraform import -input=false azurerm_resource_group.rg1 "/subscriptions/${SUB_ID}/resourceGroups/${RG_NAME}"
+            fi
+          else
+            echo "RG does not exist in Azure. Terraform will create it (if defined in code)."
+          fi
 
       - name: Terraform Plan
         env:
