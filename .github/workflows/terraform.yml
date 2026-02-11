@@ -67,6 +67,37 @@ jobs:
       - name: Terraform Init
         run: terraform init -input=false
 
+
+      - name: Import existing Resource Group (if already exists)
+        env:
+          ARM_USE_AZUREAD: "true"
+          ARM_USE_CLI: "false"
+          TF_VAR_resource_group_name: ${{ secrets.TF_VAR_RESOURCE_GROUP_NAME }}
+          TF_VAR_location: ${{ secrets.TF_VAR_LOCATION }}
+          TF_VAR_vnet_name: ${{ secrets.TF_VAR_VNET_NAME }}
+          TF_VAR_vnet_address_space: ${{ secrets.TF_VAR_VNET_ADDRESS_SPACE }}
+          TF_VAR_subnet_name: ${{ secrets.TF_VAR_SUBNET_NAME }}
+          TF_VAR_subnet_address_prefix: ${{ secrets.TF_VAR_SUBNET_ADDRESS_PREFIX }}
+          TF_VAR_tags: ${{ secrets.TF_VAR_TAGS }}
+        run: |
+          set -e
+          RG_ID="/subscriptions/${{ fromJson(secrets.AZURE_CREDENTIALS).subscriptionId }}/resourceGroups/${{ secrets.TF_VAR_RESOURCE_GROUP_NAME }}"
+
+          echo "Checking if RG is already in Terraform state..."
+          if terraform state list | grep -q "^azurerm_resource_group.rg1$"; then
+            echo "RG already in state. Skipping import."
+            exit 0
+          fi
+
+          echo "Checking if RG exists in Azure..."
+          if az group show --name "${{ secrets.TF_VAR_RESOURCE_GROUP_NAME }}" >/dev/null 2>&1; then
+            echo "RG exists in Azure. Importing into state..."
+            terraform import azurerm_resource_group.rg1 "$RG_ID"
+          else
+            echo "RG does not exist in Azure. Terraform will create it."
+          fi
+
+
       - name: Terraform Plan
         env:
           TF_VAR_resource_group_name: ${{ secrets.TF_VAR_RESOURCE_GROUP_NAME }}
