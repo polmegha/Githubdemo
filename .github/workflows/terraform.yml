@@ -121,178 +121,6 @@
       #   run: terraform apply -auto-approve -input=false
 
 # ---- remove exixt error and add condition to apply only if changes exist ------------------------------------------
-# name: Terraform Pipeline
-
-# on:
-#   push:
-#     branches: [ main ]
-#   workflow_dispatch:
-
-# permissions:
-#   contents: read
-
-# jobs:
-#   terraform:
-#     runs-on: ubuntu-latest
-#     timeout-minutes: 20
-
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v4
-
-#       - name: Setup Terraform
-#         uses: hashicorp/setup-terraform@v3
-#         with:
-#           terraform_version: 1.6.6
-
-#       - name: Azure Login
-#         uses: azure/login@v2
-#         with:
-#           creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-#       # IMPORTANT: Uses your backend.tf remote state
-#       - name: Terraform Init
-#         env:
-#           ARM_USE_AZUREAD: true
-#         run: terraform init -reconfigure -input=false
-
-#       # This will print exactly the plan output in logs
-#       - name: Terraform Plan (print output)
-#         env:
-#           ARM_USE_AZUREAD: true
-#           TF_VAR_resource_group_name: ${{ secrets.TF_VAR_RESOURCE_GROUP_NAME }}
-#           TF_VAR_location: ${{ secrets.TF_VAR_LOCATION }}
-#           TF_VAR_vnet_name: ${{ secrets.TF_VAR_VNET_NAME }}
-#           TF_VAR_vnet_address_space: ${{ secrets.TF_VAR_VNET_ADDRESS_SPACE }}
-#           TF_VAR_tags: ${{ secrets.TF_VAR_TAGS }}
-#           TF_VAR_subnet_name: ${{ secrets.TF_VAR_SUBNET_NAME }}
-#           TF_VAR_subnet_address_prefix: ${{ secrets.TF_VAR_SUBNET_ADDRESS_PREFIX }}
-
-#         run: terraform plan -input=false
-
-#       # Optional: Apply only if changes exist (safe)
-#       - name: Terraform Plan (detect changes)
-#         id: plancheck
-#         env:
-#           ARM_USE_AZUREAD: true
-#           TF_VAR_resource_group_name: ${{ secrets.TF_VAR_RESOURCE_GROUP_NAME }}
-#           TF_VAR_location: ${{ secrets.TF_VAR_LOCATION }}
-#           TF_VAR_vnet_name: ${{ secrets.TF_VAR_VNET_NAME }}
-#           TF_VAR_vnet_address_space: ${{ secrets.TF_VAR_VNET_ADDRESS_SPACE }}
-#           TF_VAR_tags: ${{ secrets.TF_VAR_TAGS }}
-#           TF_VAR_subnet_name: ${{ secrets.TF_VAR_SUBNET_NAME }}
-#           TF_VAR_subnet_address_prefix: ${{ secrets.TF_VAR_SUBNET_ADDRESS_PREFIX }}
-
-#         run: |
-#           set +e
-#           terraform plan -input=false -detailed-exitcode
-#           code=$?
-#           echo "exitcode=$code" >> $GITHUB_OUTPUT
-#           exit 0
-
-#       - name: Terraform Apply (only if changes)
-#         if: steps.plancheck.outputs.exitcode == '2'
-#         env:
-#           ARM_USE_AZUREAD: true
-#           TF_VAR_resource_group_name: ${{ secrets.TF_VAR_RESOURCE_GROUP_NAME }}
-#           TF_VAR_location: ${{ secrets.TF_VAR_LOCATION }}
-#           TF_VAR_vnet_name: ${{ secrets.TF_VAR_VNET_NAME }}
-#           TF_VAR_vnet_address_space: ${{ secrets.TF_VAR_VNET_ADDRESS_SPACE }}
-#           TF_VAR_tags: ${{ secrets.TF_VAR_TAGS }}
-#         run: terraform apply -auto-approve -input=false
-
-#       - name: Skip Apply (no changes)
-#         if: steps.plancheck.outputs.exitcode == '0'
-#         run: echo "No changes. Your infrastructure matches the configuration."
-
-#another fix for apply issue with condition to apply only if changes exist (safe) and also handle error in plan step ------------------------------------------
-
-#not working
-# name: Terraform Pipeline
-
-# on:
-#   push:
-#     branches: [ main ]
-#   workflow_dispatch:
-
-# permissions:
-#   contents: read
-
-# jobs:
-#   terraform:
-#     runs-on: ubuntu-latest
-#     timeout-minutes: 30
-
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v4
-
-#       - name: Setup Terraform
-#         uses: hashicorp/setup-terraform@v3
-#         with:
-#           terraform_version: 1.6.6
-
-#       - name: Azure Login
-#         uses: azure/login@v2
-#         with:
-#           creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-#       # (Optional but recommended) show Azure context
-#       - name: Azure Account Show
-#         run: az account show
-
-#       - name: Terraform Init
-#         env:
-#           ARM_USE_AZUREAD: "true"
-#           ARM_USE_CLI: "false"
-#         run: terraform init -reconfigure -input=false
-
-#       - name: Terraform Plan (detect changes + save plan)
-#         id: plancheck
-#         env:
-#           ARM_USE_AZUREAD: "true"
-#           ARM_USE_CLI: "false"
-#           TF_VAR_resource_group_name: ${{ secrets.TF_VAR_RESOURCE_GROUP_NAME }}
-#           TF_VAR_location: ${{ secrets.TF_VAR_LOCATION }}
-#           TF_VAR_vnet_name: ${{ secrets.TF_VAR_VNET_NAME }}
-#           TF_VAR_vnet_address_space: ${{ secrets.TF_VAR_VNET_ADDRESS_SPACE }}
-#           TF_VAR_subnet_name: ${{ secrets.TF_VAR_SUBNET_NAME }}
-#           TF_VAR_subnet_address_prefix: ${{ secrets.TF_VAR_SUBNET_ADDRESS_PREFIX }}
-#           TF_VAR_tags: ${{ secrets.TF_VAR_TAGS }}
-#         run: |
-#           set +e
-#           terraform plan -input=false -detailed-exitcode -out=tfplan
-#           EXITCODE=$?
-#           echo "Terraform plan exit code: $EXITCODE"
-#           echo "exitcode=$EXITCODE" >> $GITHUB_OUTPUT
-
-#           # Exit code 1 means error -> fail workflow
-#           if [ "$EXITCODE" -eq 1 ]; then
-#             exit 1
-#           fi
-
-#           # Exit code 0 (no changes) or 2 (changes) -> success
-#           exit 0
-
-#       - name: Terraform Apply (only if changes)
-#         if: steps.plancheck.outputs.exitcode == '2'
-#         env:
-#           ARM_USE_AZUREAD: "true"
-#           ARM_USE_CLI: "false"
-#           TF_VAR_resource_group_name: ${{ secrets.TF_VAR_RESOURCE_GROUP_NAME }}
-#           TF_VAR_location: ${{ secrets.TF_VAR_LOCATION }}
-#           TF_VAR_vnet_name: ${{ secrets.TF_VAR_VNET_NAME }}
-#           TF_VAR_vnet_address_space: ${{ secrets.TF_VAR_VNET_ADDRESS_SPACE }}
-#           TF_VAR_subnet_name: ${{ secrets.TF_VAR_SUBNET_NAME }}
-#           TF_VAR_subnet_address_prefix: ${{ secrets.TF_VAR_SUBNET_ADDRESS_PREFIX }}
-#           TF_VAR_tags: ${{ secrets.TF_VAR_TAGS }}
-#         run: terraform apply -auto-approve -input=false tfplan
-
-#       - name: Skip Apply (no changes)
-#         if: steps.plancheck.outputs.exitcode == '0'
-#         run: echo "No changes. Your infrastructure matches the configuration."
-
-#last one
 name: Terraform Pipeline
 
 on:
@@ -302,34 +130,11 @@ on:
 
 permissions:
   contents: read
-  id-token: write   # REQUIRED for OIDC login
 
 jobs:
   terraform:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    env:
-      # Terraform auth (OIDC) - avoids Azure CLI "User only" issue
-      ARM_USE_OIDC: "true"
-      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      # For azurerm backend using Azure AD auth (recommended)
-      ARM_USE_AZUREAD: "true"
-      ARM_USE_CLI: "false"
-
-      # Your TF variables
-      TF_VAR_location: ${{ secrets.TF_VAR_LOCATION }}
-      TF_VAR_subnet_name: ${{ secrets.TF_VAR_SUBNET_NAME }}
-      TF_VAR_subnet_address_prefix: ${{ secrets.TF_VAR_SUBNET_ADDRESS_PREFIX }}
-      TF_VAR_tags: ${{ secrets.TF_VAR_TAGS }}
-
-      # If you still use these vars in code
-      TF_VAR_resource_group_name: ${{ secrets.TF_VAR_RESOURCE_GROUP_NAME }}
-      TF_VAR_vnet_name: ${{ secrets.TF_VAR_VNET_NAME }}
-      TF_VAR_vnet_address_space: ${{ secrets.TF_VAR_VNET_ADDRESS_SPACE }}
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
@@ -340,38 +145,149 @@ jobs:
         with:
           terraform_version: 1.6.6
 
-      # OIDC Azure login (no AZURE_CREDENTIALS needed)
-      - name: Azure Login (OIDC)
+      - name: Azure Login
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      # IMPORTANT: Uses your backend.tf remote state
       - name: Terraform Init
+        env:
+          ARM_USE_AZUREAD: true
         run: terraform init -reconfigure -input=false
 
-      - name: Terraform Plan (detect changes + save plan)
+      # This will print exactly the plan output in logs
+      - name: Terraform Plan (print output)
+        env:
+          ARM_USE_AZUREAD: true
+          TF_VAR_resource_group_name: ${{ secrets.TF_VAR_RESOURCE_GROUP_NAME }}
+          TF_VAR_location: ${{ secrets.TF_VAR_LOCATION }}
+          TF_VAR_vnet_name: ${{ secrets.TF_VAR_VNET_NAME }}
+          TF_VAR_vnet_address_space: ${{ secrets.TF_VAR_VNET_ADDRESS_SPACE }}
+          TF_VAR_tags: ${{ secrets.TF_VAR_TAGS }}
+          TF_VAR_subnet_name: ${{ secrets.TF_VAR_SUBNET_NAME }}
+          TF_VAR_subnet_address_prefix: ${{ secrets.TF_VAR_SUBNET_ADDRESS_PREFIX }}
+
+        run: terraform plan -input=false
+
+      # Optional: Apply only if changes exist (safe)
+      - name: Terraform Plan (detect changes)
         id: plancheck
+        env:
+          ARM_USE_AZUREAD: true
+          TF_VAR_resource_group_name: ${{ secrets.TF_VAR_RESOURCE_GROUP_NAME }}
+          TF_VAR_location: ${{ secrets.TF_VAR_LOCATION }}
+          TF_VAR_vnet_name: ${{ secrets.TF_VAR_VNET_NAME }}
+          TF_VAR_vnet_address_space: ${{ secrets.TF_VAR_VNET_ADDRESS_SPACE }}
+          TF_VAR_tags: ${{ secrets.TF_VAR_TAGS }}
+          TF_VAR_subnet_name: ${{ secrets.TF_VAR_SUBNET_NAME }}
+          TF_VAR_subnet_address_prefix: ${{ secrets.TF_VAR_SUBNET_ADDRESS_PREFIX }}
+
         run: |
           set +e
-          terraform plan -input=false -detailed-exitcode -out=tfplan
-          EXITCODE=$?
-          echo "Terraform plan exit code: $EXITCODE"
-          echo "exitcode=$EXITCODE" >> $GITHUB_OUTPUT
-
-          # 1 = error
-          if [ "$EXITCODE" -eq 1 ]; then
-            exit 1
-          fi
-
-          # 0 (no changes) or 2 (changes)
+          terraform plan -input=false -detailed-exitcode
+          code=$?
+          echo "exitcode=$code" >> $GITHUB_OUTPUT
           exit 0
 
       - name: Terraform Apply (only if changes)
         if: steps.plancheck.outputs.exitcode == '2'
-        run: terraform apply -auto-approve -input=false tfplan
+        env:
+          ARM_USE_AZUREAD: true
+          TF_VAR_resource_group_name: ${{ secrets.TF_VAR_RESOURCE_GROUP_NAME }}
+          TF_VAR_location: ${{ secrets.TF_VAR_LOCATION }}
+          TF_VAR_vnet_name: ${{ secrets.TF_VAR_VNET_NAME }}
+          TF_VAR_vnet_address_space: ${{ secrets.TF_VAR_VNET_ADDRESS_SPACE }}
+          TF_VAR_tags: ${{ secrets.TF_VAR_TAGS }}
+        run: terraform apply -auto-approve -input=false
 
       - name: Skip Apply (no changes)
         if: steps.plancheck.outputs.exitcode == '0'
         run: echo "No changes. Your infrastructure matches the configuration."
+
+
+
+
+# #last one
+# name: Terraform Pipeline
+
+# on:
+#   push:
+#     branches: [ main ]
+#   workflow_dispatch:
+
+# permissions:
+#   contents: read
+#   id-token: write   # REQUIRED for OIDC login
+
+# jobs:
+#   terraform:
+#     runs-on: ubuntu-latest
+#     timeout-minutes: 30
+
+#     env:
+#       # Terraform auth (OIDC) - avoids Azure CLI "User only" issue
+#       ARM_USE_OIDC: "true"
+#       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+#       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+#       ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+#       # For azurerm backend using Azure AD auth (recommended)
+#       ARM_USE_AZUREAD: "true"
+#       ARM_USE_CLI: "false"
+
+#       # Your TF variables
+#       TF_VAR_location: ${{ secrets.TF_VAR_LOCATION }}
+#       TF_VAR_subnet_name: ${{ secrets.TF_VAR_SUBNET_NAME }}
+#       TF_VAR_subnet_address_prefix: ${{ secrets.TF_VAR_SUBNET_ADDRESS_PREFIX }}
+#       TF_VAR_tags: ${{ secrets.TF_VAR_TAGS }}
+
+#       # If you still use these vars in code
+#       TF_VAR_resource_group_name: ${{ secrets.TF_VAR_RESOURCE_GROUP_NAME }}
+#       TF_VAR_vnet_name: ${{ secrets.TF_VAR_VNET_NAME }}
+#       TF_VAR_vnet_address_space: ${{ secrets.TF_VAR_VNET_ADDRESS_SPACE }}
+
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v3
+#         with:
+#           terraform_version: 1.6.6
+
+#       # OIDC Azure login (no AZURE_CREDENTIALS needed)
+#       - name: Azure Login (OIDC)
+#         uses: azure/login@v2
+#         with:
+#           client-id: ${{ secrets.AZURE_CLIENT_ID }}
+#           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+#           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+#       - name: Terraform Init
+#         run: terraform init -reconfigure -input=false
+
+#       - name: Terraform Plan (detect changes + save plan)
+#         id: plancheck
+#         run: |
+#           set +e
+#           terraform plan -input=false -detailed-exitcode -out=tfplan
+#           EXITCODE=$?
+#           echo "Terraform plan exit code: $EXITCODE"
+#           echo "exitcode=$EXITCODE" >> $GITHUB_OUTPUT
+
+#           # 1 = error
+#           if [ "$EXITCODE" -eq 1 ]; then
+#             exit 1
+#           fi
+
+#           # 0 (no changes) or 2 (changes)
+#           exit 0
+
+#       - name: Terraform Apply (only if changes)
+#         if: steps.plancheck.outputs.exitcode == '2'
+#         run: terraform apply -auto-approve -input=false tfplan
+
+#       - name: Skip Apply (no changes)
+#         if: steps.plancheck.outputs.exitcode == '0'
+#         run: echo "No changes. Your infrastructure matches the configuration."
