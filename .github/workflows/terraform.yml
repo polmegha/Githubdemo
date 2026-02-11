@@ -130,6 +130,9 @@ jobs:
           TF_VAR_vnet_name: ${{ secrets.TF_VAR_VNET_NAME }}
           TF_VAR_vnet_address_space: ${{ secrets.TF_VAR_VNET_ADDRESS_SPACE }}
           TF_VAR_tags: ${{ secrets.TF_VAR_TAGS }}
+          TF_VAR_subnet_name: ${{ secrets.TF_VAR_SUBNET_NAME }}
+          TF_VAR_subnet_address_prefix: ${{ secrets.TF_VAR_SUBNET_ADDRESS_PREFIX }}
+
         run: terraform plan -input=false
 
       # Optional: Apply only if changes exist (safe)
@@ -142,6 +145,9 @@ jobs:
           TF_VAR_vnet_name: ${{ secrets.TF_VAR_VNET_NAME }}
           TF_VAR_vnet_address_space: ${{ secrets.TF_VAR_VNET_ADDRESS_SPACE }}
           TF_VAR_tags: ${{ secrets.TF_VAR_TAGS }}
+          TF_VAR_subnet_name: ${{ secrets.TF_VAR_SUBNET_NAME }}
+          TF_VAR_subnet_address_prefix: ${{ secrets.TF_VAR_SUBNET_ADDRESS_PREFIX }}
+
         run: |
           set +e
           terraform plan -input=false -detailed-exitcode
