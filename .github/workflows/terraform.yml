@@ -200,27 +200,21 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      # (Optional but recommended) show Azure context
+      - name: Azure Account Show
+        run: az account show
+
       - name: Terraform Init
         env:
-          ARM_USE_AZUREAD: true
+          ARM_USE_AZUREAD: "true"
+          ARM_USE_CLI: "false"
         run: terraform init -reconfigure -input=false
 
-      - name: Terraform Plan (print)
-        env:
-          ARM_USE_AZUREAD: true
-          TF_VAR_resource_group_name: ${{ secrets.TF_VAR_RESOURCE_GROUP_NAME }}
-          TF_VAR_location: ${{ secrets.TF_VAR_LOCATION }}
-          TF_VAR_vnet_name: ${{ secrets.TF_VAR_VNET_NAME }}
-          TF_VAR_vnet_address_space: ${{ secrets.TF_VAR_VNET_ADDRESS_SPACE }}
-          TF_VAR_subnet_name: ${{ secrets.TF_VAR_SUBNET_NAME }}
-          TF_VAR_subnet_address_prefix: ${{ secrets.TF_VAR_SUBNET_ADDRESS_PREFIX }}
-          TF_VAR_tags: ${{ secrets.TF_VAR_TAGS }}
-        run: terraform plan -input=false
-
-      - name: Terraform Plan (detect changes)
+      - name: Terraform Plan (detect changes + save plan)
         id: plancheck
         env:
-          ARM_USE_AZUREAD: true
+          ARM_USE_AZUREAD: "true"
+          ARM_USE_CLI: "false"
           TF_VAR_resource_group_name: ${{ secrets.TF_VAR_RESOURCE_GROUP_NAME }}
           TF_VAR_location: ${{ secrets.TF_VAR_LOCATION }}
           TF_VAR_vnet_name: ${{ secrets.TF_VAR_VNET_NAME }}
@@ -230,23 +224,24 @@ jobs:
           TF_VAR_tags: ${{ secrets.TF_VAR_TAGS }}
         run: |
           set +e
-          terraform plan -input=false -detailed-exitcode
+          terraform plan -input=false -detailed-exitcode -out=tfplan
           EXITCODE=$?
           echo "Terraform plan exit code: $EXITCODE"
           echo "exitcode=$EXITCODE" >> $GITHUB_OUTPUT
 
-          # If error (exit code 1), fail the job
+          # Exit code 1 means error -> fail workflow
           if [ "$EXITCODE" -eq 1 ]; then
             exit 1
           fi
 
-          # For 0 (no changes) or 2 (changes), succeed
+          # Exit code 0 (no changes) or 2 (changes) -> success
           exit 0
 
       - name: Terraform Apply (only if changes)
         if: steps.plancheck.outputs.exitcode == '2'
         env:
-          ARM_USE_AZUREAD: true
+          ARM_USE_AZUREAD: "true"
+          ARM_USE_CLI: "false"
           TF_VAR_resource_group_name: ${{ secrets.TF_VAR_RESOURCE_GROUP_NAME }}
           TF_VAR_location: ${{ secrets.TF_VAR_LOCATION }}
           TF_VAR_vnet_name: ${{ secrets.TF_VAR_VNET_NAME }}
@@ -254,8 +249,9 @@ jobs:
           TF_VAR_subnet_name: ${{ secrets.TF_VAR_SUBNET_NAME }}
           TF_VAR_subnet_address_prefix: ${{ secrets.TF_VAR_SUBNET_ADDRESS_PREFIX }}
           TF_VAR_tags: ${{ secrets.TF_VAR_TAGS }}
-        run: terraform apply -auto-approve -input=false
+        run: terraform apply -auto-approve -input=false tfplan
 
       - name: Skip Apply (no changes)
         if: steps.plancheck.outputs.exitcode == '0'
         run: echo "No changes. Your infrastructure matches the configuration."
+
